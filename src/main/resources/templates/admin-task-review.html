@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{base}">
+<head>
+    <title>Review Task Completions</title>
+</head>
+<body>
+    <div th:fragment="content">
+        <div class="mb-4">
+            <h1><i class="bi bi-clipboard-check"></i> Review Task Completions</h1>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div th:if="${#lists.isEmpty(completedTasks)}" class="text-muted">
+                    No completed tasks to review
+                </div>
+                <div th:if="${!#lists.isEmpty(completedTasks)}">
+                    <div class="accordion" id="taskAccordion">
+                        <div class="accordion-item" th:each="task : ${completedTasks}">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" 
+                                        th:data-bs-toggle="collapse" 
+                                        th:attr="data-bs-target='#collapse' + ${task.id}, id='heading' + ${task.id}">
+                                    <strong th:text="${task.taskName}"></strong>
+                                    <span class="badge bg-info ms-2">COMPLETED</span>
+                                    <small class="ms-2 text-muted" th:text="'by ' + ${task.assignedTo.username}"></small>
+                                </button>
+                            </h2>
+                            <div th:attr="id='collapse' + ${task.id}" 
+                                 class="accordion-collapse collapse" 
+                                 data-bs-parent="#taskAccordion">
+                                <div class="accordion-body">
+                                    <div class="mb-3">
+                                        <h6>Workflow:</h6>
+                                        <p th:text="${task.processResult.processName}"></p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <h6>Assigned To:</h6>
+                                        <p th:text="${task.assignedTo.username + ' (' + task.assignedTo.email + ')'}"></p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <h6>Description:</h6>
+                                        <p th:text="${task.description}"></p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <h6>User Notes:</h6>
+                                        <div class="p-3 bg-light rounded" th:text="${task.userNotes}"></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <h6>Completed At:</h6>
+                                        <p th:text="${#temporals.format(task.completedAt, 'yyyy-MM-dd HH:mm:ss')}"></p>
+                                    </div>
+                                    
+                                    <form th:action="@{/admin/tasks/{id}/approve(id=${task.id})}" method="post">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                        <div class="mb-3">
+                                            <label for="adminNotes" class="form-label">Admin Notes (Optional)</label>
+                                            <textarea class="form-control" id="adminNotes" name="adminNotes" rows="3"
+                                                      placeholder="Masukkan catatan atau feedback..."></textarea>
+                                        </div>
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="bi bi-check-circle"></i> Approve & Complete Workflow
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

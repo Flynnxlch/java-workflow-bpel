@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{base}">
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+    <div th:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-white bg-warning">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-hourglass-split"></i> Unfinished Tasks</h5>
+                        <h2 th:text="${unfinishedTaskCount}">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-check-circle"></i> Completed Tasks</h5>
+                        <h2 th:text="${completedTaskCount}">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3" sec:authorize="hasRole('ADMIN')">
+                <div class="card text-white bg-primary">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-list-task"></i> Total Workflows</h5>
+                        <h2 th:text="${#lists.size(processResults)}">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-person"></i> User</h5>
+                        <h6 th:text="${user.username}">Username</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6" sec:authorize="hasRole('ADMIN')">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-play-circle"></i> Create Workflow with Assignment</h5>
+                    </div>
+                    <div class="card-body">
+                        <a th:href="@{/workflow/create}" class="btn btn-primary w-100">
+                            <i class="bi bi-plus-circle"></i> Create New Workflow
+                        </a>
+                        <p class="text-muted mt-3 mb-0">
+                            <small>Create workflows with multiple tasks. Each task can be assigned to specific users.</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6" sec:authorize="!hasRole('ADMIN')">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-list-check"></i> My Active Tasks</h5>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${#lists.isEmpty(taskAssignments)}" class="text-muted">
+                            No active tasks assigned to you
+                        </div>
+                        <div th:if="${!#lists.isEmpty(taskAssignments)}">
+                            <div class="list-group">
+                                <div class="list-group-item" th:each="assignment : ${taskAssignments}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong th:text="${assignment.taskName}">Task Name</strong><br>
+                                            <small class="text-muted" th:text="${assignment.description}">Description</small>
+                                        </div>
+                                        <div>
+                                            <a th:href="@{/tasks/{id}/complete(id=${assignment.id})}" class="btn btn-sm btn-success">
+                                                <i class="bi bi-check-circle"></i> Complete
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User: Workflow dengan Expandable Tasks -->
+        <div class="card mt-4" sec:authorize="!hasRole('ADMIN')">
+            <div class="card-header">
+                <h5><i class="bi bi-diagram-3"></i> My Workflows</h5>
+            </div>
+            <div class="card-body">
+                <div th:if="${#lists.isEmpty(workflowsWithTasks)}" class="text-muted">
+                    No workflows assigned to you
+                </div>
+                <div th:if="${!#lists.isEmpty(workflowsWithTasks)}">
+                    <div class="accordion" id="workflowAccordion">
+                        <div class="accordion-item" th:each="workflow : ${workflowsWithTasks}">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" 
+                                        data-bs-toggle="collapse" 
+                                        th:attr="data-bs-target='#collapse' + ${workflow.id}, id='heading' + ${workflow.id}">
+                                    <strong th:text="${workflow.processName}"></strong>
+                                    <span class="badge ms-2" 
+                                          th:classappend="${workflow.status == 'COMPLETED'} ? 'bg-success' : 
+                                                          (${workflow.status == 'FAILED'} ? 'bg-danger' : 'bg-warning')"
+                                          th:text="${workflow.status}">PENDING</span>
+                                </button>
+                            </h2>
+                            <div th:attr="id='collapse' + ${workflow.id}" 
+                                 class="accordion-collapse collapse" 
+                                 data-bs-parent="#workflowAccordion">
+                                <div class="accordion-body">
+                                    <div class="list-group">
+                                        <div class="list-group-item" th:each="task : ${workflow.taskAssignments}">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <h6 th:text="${task.taskName}">Task Name</h6>
+                                                    <p class="mb-1" th:text="${task.description}">Description</p>
+                                                    <small class="text-muted">
+                                                        Status: <span class="badge" 
+                                                                     th:classappend="${task.status == 'APPROVED'} ? 'bg-success' : 
+                                                                                     (${task.status == 'COMPLETED'} ? 'bg-info' : 
+                                                                                     (${task.status == 'FAILED'} ? 'bg-danger' : 'bg-warning'))"
+                                                                     th:text="${task.status}">PENDING</span>
+                                                    </small>
+                                                    <div th:if="${task.userNotes != null}" class="mt-2">
+                                                        <strong>Your Notes:</strong>
+                                                        <p th:text="${task.userNotes}"></p>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <a th:if="${task.status == 'PENDING' || task.status == 'IN_PROGRESS'}"
+                                                       th:href="@{/tasks/{id}/complete(id=${task.id})}" 
+                                                       class="btn btn-sm btn-success">
+                                                        <i class="bi bi-check-circle"></i> Complete
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin: Review Tasks -->
+        <div class="card mt-4" sec:authorize="hasRole('ADMIN')">
+            <div class="card-header">
+                <h5><i class="bi bi-clipboard-check"></i> Review Task Completions</h5>
+            </div>
+            <div class="card-body">
+                <a th:href="@{/admin/tasks/review}" class="btn btn-primary">
+                    <i class="bi bi-eye"></i> Review All Tasks
+                </a>
+            </div>
+        </div>
+
+        <!-- Admin: Process Results -->
+        <div class="card mt-4" sec:authorize="hasRole('ADMIN')">
+            <div class="card-header">
+                <h5><i class="bi bi-table"></i> Recent Process Results</h5>
+            </div>
+            <div class="card-body">
+                <div th:if="${#lists.isEmpty(processResults)}" class="text-muted">
+                    No process results yet.
+                </div>
+                <div class="table-responsive" th:if="${!#lists.isEmpty(processResults)}">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Process Name</th>
+                                <th>Status</th>
+                                <th>Created At</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="result : ${processResults}">
+                                <td th:text="${result.id}">1</td>
+                                <td th:text="${result.processName}">Sample Process</td>
+                                <td>
+                                    <span class="badge" 
+                                          th:classappend="${result.status == 'COMPLETED'} ? 'bg-success' : 
+                                                          (${result.status == 'FAILED'} ? 'bg-danger' : 'bg-warning')"
+                                          th:text="${result.status}">PENDING</span>
+                                </td>
+                                <td th:text="${#temporals.format(result.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</td>
+                                <td>
+                                    <a th:href="@{/process-results/{id}/edit(id=${result.id})}" 
+                                       class="btn btn-sm btn-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a th:href="@{/process-results/{id}/delete(id=${result.id})}" 
+                                       class="btn btn-sm btn-danger"
+                                       onclick="return confirm('Are you sure?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
+                    <a th:href="@{/process-results}" class="btn btn-outline-primary">View All Process Results</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification for Task Approval -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="approvalToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-success text-white">
+                <i class="bi bi-check-circle me-2"></i>
+                <strong class="me-auto">Task Approved!</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="approvalToastBody">
+                Your task has been approved by admin.
+            </div>
+        </div>
+    </div>
+    
+    <script sec:authorize="!hasRole('ADMIN')">
+        // Check for recent approvals every 5 seconds
+        function checkApprovals() {
+            fetch('/api/check-approvals')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.hasNewApprovals && data.approvals) {
+                        // Show toast notification for each approval
+                        data.approvals.forEach(approval => {
+                            const toastBody = document.getElementById('approvalToastBody');
+                            toastBody.innerHTML = '<strong>' + approval.taskName + '</strong><br>' +
+                                'from workflow: ' + approval.workflowName + '<br>' +
+                                '<small class="text-muted">has been approved by admin!</small>';
+                            
+                            const toastElement = document.getElementById('approvalToast');
+                            const toast = new bootstrap.Toast(toastElement, {
+                                autohide: true,
+                                delay: 5000
+                            });
+                            toast.show();
+                            
+                            // Reload dashboard after toast disappears
+                            setTimeout(() => {
+                                location.reload();
+                            }, 5500);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking approvals:', error);
+                });
+        }
+        
+        // Start polling after 5 seconds delay, then every 5 seconds
+        setTimeout(() => {
+            checkApprovals();
+            setInterval(checkApprovals, 5000);
+        }, 5000);
+    </script>
+</body>
+</html>
+

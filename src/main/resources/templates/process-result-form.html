@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{base}">
+<head>
+    <title th:text="${processResult.id != null ? 'Edit Process Result' : 'New Process Result'}">Process Result Form</title>
+</head>
+<body>
+    <div th:fragment="content">
+        <div class="mb-4">
+            <h1>
+                <i class="bi bi-file-earmark-plus"></i>
+                <span th:text="${processResult.id != null ? 'Edit Process Result' : 'New Process Result'}">Process Result Form</span>
+            </h1>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <!-- Form for Edit (when ID exists) -->
+                <form th:if="${processResult.id != null}" 
+                      th:action="@{/process-results/{id}(id=${processResult.id})}" 
+                      th:object="${processResult}" method="post">
+                    <input type="hidden" th:field="*{id}"/>
+                    <input type="hidden" th:field="*{user}"/>
+                    <input type="hidden" th:field="*{createdAt}"/>
+                    
+                    <div class="mb-3">
+                        <label for="processName" class="form-label">Process Name</label>
+                        <input type="text" class="form-control" id="processName" th:field="*{processName}" required>
+                        <small class="form-text text-muted">Name of the process (e.g., sample-process)</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" th:field="*{status}" required>
+                            <option value="PENDING">PENDING</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                            <option value="FAILED">FAILED</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="resultData" class="form-label">Result Data</label>
+                        <textarea class="form-control" id="resultData" th:field="*{resultData}" rows="5" readonly style="background-color: #f8f9fa;"></textarea>
+                        <small class="form-text text-muted">Result Data tidak dapat diubah (read-only)</small>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a th:href="@{/process-results}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Save
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Form for Create (when ID is null) -->
+                <form th:unless="${processResult.id != null}" 
+                      th:action="@{/process-results}" 
+                      th:object="${processResult}" method="post">
+                    <div class="mb-3">
+                        <label for="processName" class="form-label">Process Name</label>
+                        <input type="text" class="form-control" id="processName" th:field="*{processName}" required>
+                        <small class="form-text text-muted">Name of the process (e.g., sample-process)</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" th:field="*{status}" required>
+                            <option value="PENDING">PENDING</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                            <option value="FAILED">FAILED</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="resultData" class="form-label">Result Data</label>
+                        <textarea class="form-control" id="resultData" th:field="*{resultData}" rows="5" readonly style="background-color: #f8f9fa;"></textarea>
+                        <small class="form-text text-muted">Result Data akan diisi otomatis oleh sistem (read-only)</small>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a th:href="@{/process-results}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

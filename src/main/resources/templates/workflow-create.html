@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{base}">
+<head>
+    <title>Create Workflow with Assignment</title>
+</head>
+<body>
+    <div th:fragment="content">
+        <div class="mb-4">
+            <h1><i class="bi bi-plus-circle"></i> Create Workflow with Assignment</h1>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form th:action="@{/workflow/create}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    
+                    <div class="mb-3">
+                        <label for="workflowName" class="form-label">Workflow Name</label>
+                        <input type="text" class="form-control" id="workflowName" name="workflowName" required>
+                        <small class="form-text text-muted">Nama workflow (contoh: Document Review, Approval Process)</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="workflowMode" class="form-label">Workflow Mode <span class="text-danger">*</span></label>
+                        <select class="form-select" id="workflowMode" name="workflowMode" required onchange="toggleWorkflowMode()">
+                            <option value="">-- Pilih Mode --</option>
+                            <option value="MANUAL">Manual (Buat Task Secara Manual)</option>
+                            <option value="BPMN">BPMN (Gunakan BPMN Process Definition)</option>
+                        </select>
+                        <small class="form-text text-muted">Pilih mode workflow: Manual untuk membuat task secara manual, atau BPMN untuk menggunakan process definition yang sudah didefinisikan</small>
+                    </div>
+
+                    <!-- BPMN Process Selection (hidden by default) -->
+                    <div class="mb-3" id="bpmnProcessSection" style="display: none;">
+                        <label for="bpmnProcessKey" class="form-label">BPMN Process <span class="text-danger">*</span></label>
+                        <select class="form-select" id="bpmnProcessKey" name="bpmnProcessKey">
+                            <option value="">-- Pilih BPMN Process --</option>
+                            <option th:if="${#lists.isEmpty(processDefinitions)}" value="" disabled>No BPMN processes available. Please deploy BPMN files first.</option>
+                            <option th:each="def : ${processDefinitions}" 
+                                    th:value="${def.key}" 
+                                    th:text="${def.name + ' (' + def.key + ')'}">
+                            </option>
+                        </select>
+                        <small class="form-text text-muted">Pilih BPMN process definition yang akan digunakan. Tasks akan diambil dari BPMN file.</small>
+                        <div th:if="${#lists.isEmpty(processDefinitions)}" class="alert alert-warning mt-2">
+                            <small><i class="bi bi-exclamation-triangle"></i> No BPMN processes found. Make sure BPMN files are in <code>src/main/resources/processes/</code> and Flowable engine is running.</small>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h5>Assign Users to Workflow</h5>
+                    <p class="text-muted">Pilih user yang akan di-assign ke workflow ini. Task hanya bisa di-assign ke user yang sudah di-assign di workflow.</p>
+                    <div class="mb-3">
+                        <label class="form-label">Select Users <span class="text-danger">*</span></label>
+                        <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                            <div th:each="user : ${users}" class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       th:id="'user_' + ${user.id}"
+                                       th:value="${user.id}" 
+                                       name="workflowUserIds[]"
+                                       required>
+                                <label class="form-check-label" th:for="'user_' + ${user.id}">
+                                    <span th:text="${user.username + ' (' + user.email + ')'}"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">Pilih minimal 1 user untuk di-assign ke workflow</small>
+                    </div>
+
+                    <hr>
+                    <h5 id="taskAssignmentsTitle">Task Assignments</h5>
+                    <p class="text-muted" id="taskAssignmentsDesc">Setiap task bisa di-assign ke 1 atau 2 user (hanya dari user yang sudah di-assign di workflow). Setiap task akan menjadi card terpisah seperti dalam diagram BPMN.</p>
+                    <div id="taskAssignments" class="row g-3">
+                        <!-- Task Card 1 (Default) -->
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card task-card h-100 shadow-sm">
+                                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-list-task"></i> Task 1</span>
+                                    <button type="button" class="btn btn-sm btn-light remove-task-btn" onclick="removeTaskCard(this)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Task Name <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="taskNames[]" required placeholder="Enter task name">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Description</label>
+                                        <textarea class="form-control" name="taskDescriptions[]" rows="2" placeholder="Task description"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Assign To User 1 <span class="text-danger">*</span></label>
+                                        <select class="form-select task-user-select" name="assignedUserIds[]" required>
+                                            <option value="">-- Pilih User dari Workflow --</option>
+                                            <option th:each="user : ${users}" 
+                                                    th:value="${user.id}" 
+                                                    th:text="${user.username + ' (' + user.email + ')'}">
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-0">
+                                        <label class="form-label">Assign To User 2 (Optional)</label>
+                                        <select class="form-select task-user-select" name="assignedUserIds2[]">
+                                            <option value="">-- Tidak ada --</option>
+                                            <option th:each="user : ${users}" 
+                                                    th:value="${user.id}" 
+                                                    th:text="${user.username + ' (' + user.email + ')'}">
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button type="button" id="addTaskBtn" class="btn btn-outline-primary" onclick="addTaskAssignment(event); return false;">
+                            <i class="bi bi-plus-circle"></i> Add Task Card
+                        </button>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a th:href="@{/dashboard}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Create Workflow
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <script th:inline="javascript">
+        /*<![CDATA[*/
+        var users = /*[[${usersJson}]]*/ [];
+        
+        console.log('Users loaded:', users);
+        
+        function toggleWorkflowMode() {
+            const mode = document.getElementById('workflowMode').value;
+            const bpmnSection = document.getElementById('bpmnProcessSection');
+            const taskAssignments = document.getElementById('taskAssignments');
+            const taskAssignmentsTitle = document.getElementById('taskAssignmentsTitle');
+            const taskAssignmentsDesc = document.getElementById('taskAssignmentsDesc');
+            const addTaskBtn = document.getElementById('addTaskBtn');
+            const bpmnProcessKey = document.getElementById('bpmnProcessKey');
+            
+            if (mode === 'BPMN') {
+                // Show BPMN process selection
+                bpmnSection.style.display = 'block';
+                bpmnProcessKey.required = true;
+                
+                // Hide manual task assignments
+                taskAssignments.style.display = 'none';
+                taskAssignmentsTitle.style.display = 'none';
+                taskAssignmentsDesc.style.display = 'none';
+                if (addTaskBtn) {
+                    addTaskBtn.style.display = 'none';
+                }
+            } else if (mode === 'MANUAL') {
+                // Hide BPMN process selection
+                bpmnSection.style.display = 'none';
+                bpmnProcessKey.required = false;
+                bpmnProcessKey.value = '';
+                
+                // Show manual task assignments
+                taskAssignments.style.display = 'flex';
+                taskAssignmentsTitle.style.display = 'block';
+                taskAssignmentsDesc.style.display = 'block';
+                if (addTaskBtn) {
+                    addTaskBtn.style.display = 'inline-block';
+                }
+            } else {
+                // Hide both
+                bpmnSection.style.display = 'none';
+                taskAssignments.style.display = 'none';
+                taskAssignmentsTitle.style.display = 'none';
+                taskAssignmentsDesc.style.display = 'none';
+                if (addTaskBtn) {
+                    addTaskBtn.style.display = 'none';
+                }
+            }
+        }
+        
+        function getSelectedWorkflowUsers() {
+            const checked = document.querySelectorAll('input[name="workflowUserIds[]"]:checked');
+            const userIds = Array.from(checked).map(cb => cb.value);
+            console.log('Selected workflow users:', userIds);
+            return userIds;
+        }
+        
+        function buildUserOptions(selectedUsers, includeEmpty) {
+            let options = includeEmpty ? '<option value="">-- Pilih User dari Workflow --</option>' : '<option value="">-- Tidak ada --</option>';
+            selectedUsers.forEach(userId => {
+                const user = users.find(u => String(u.id) === String(userId));
+                if (user) {
+                    options += '<option value="' + user.id + '">' + user.username + ' (' + user.email + ')</option>';
+                }
+            });
+            return options;
+        }
+        
+        function updateTaskUserSelects() {
+            const selectedUsers = getSelectedWorkflowUsers();
+            document.querySelectorAll('.task-user-select').forEach(select => {
+                const currentValue = select.value;
+                
+                // Clear all options except first
+                while (select.options.length > 1) {
+                    select.remove(1);
+                }
+                
+                // Add options for selected users
+                selectedUsers.forEach(userId => {
+                    const user = users.find(u => String(u.id) === String(userId));
+                    if (user) {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = user.username + ' (' + user.email + ')';
+                        select.appendChild(option);
+                    }
+                });
+                
+                // Restore value if still valid
+                if (currentValue && selectedUsers.includes(currentValue)) {
+                    select.value = currentValue;
+                } else {
+                    select.value = '';
+                }
+            });
+        }
+        
+        function addTaskAssignment(e) {
+            console.log('=== addTaskAssignment CALLED ===', e);
+            
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            const container = document.getElementById('taskAssignments');
+            console.log('Container:', container);
+            
+            if (!container) {
+                alert('Error: Container not found!');
+                return false;
+            }
+            
+            const selectedUsers = getSelectedWorkflowUsers();
+            console.log('Selected users:', selectedUsers);
+            
+            if (selectedUsers.length === 0) {
+                alert('Please select at least one user for the workflow first!');
+                return false;
+            }
+            
+            // Count existing tasks to get task number
+            const existingTasks = container.querySelectorAll('.task-card');
+            const taskNumber = existingTasks.length + 1;
+            console.log('Task number:', taskNumber);
+            
+            const userOptions1 = buildUserOptions(selectedUsers, true);
+            const userOptions2 = buildUserOptions(selectedUsers, false);
+            
+            // Create new task card column
+            const taskColumn = document.createElement('div');
+            taskColumn.className = 'col-md-6 col-lg-4';
+            
+            // Create task card
+            const taskCard = document.createElement('div');
+            taskCard.className = 'card task-card h-100 shadow-sm';
+            
+            taskCard.innerHTML = 
+                '<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">' +
+                    '<span><i class="bi bi-list-task"></i> Task ' + taskNumber + '</span>' +
+                    '<button type="button" class="btn btn-sm btn-light remove-task-btn" onclick="removeTaskCard(this)">' +
+                        '<i class="bi bi-trash"></i>' +
+                    '</button>' +
+                '</div>' +
+                '<div class="card-body">' +
+                    '<div class="mb-3">' +
+                        '<label class="form-label">Task Name <span class="text-danger">*</span></label>' +
+                        '<input type="text" class="form-control" name="taskNames[]" required placeholder="Enter task name">' +
+                    '</div>' +
+                    '<div class="mb-3">' +
+                        '<label class="form-label">Description</label>' +
+                        '<textarea class="form-control" name="taskDescriptions[]" rows="2" placeholder="Task description"></textarea>' +
+                    '</div>' +
+                    '<div class="mb-3">' +
+                        '<label class="form-label">Assign To User 1 <span class="text-danger">*</span></label>' +
+                        '<select class="form-select task-user-select" name="assignedUserIds[]" required>' + userOptions1 + '</select>' +
+                    '</div>' +
+                    '<div class="mb-0">' +
+                        '<label class="form-label">Assign To User 2 (Optional)</label>' +
+                        '<select class="form-select task-user-select" name="assignedUserIds2[]">' + userOptions2 + '</select>' +
+                    '</div>' +
+                '</div>';
+            
+            taskColumn.appendChild(taskCard);
+            container.appendChild(taskColumn);
+            
+            console.log('Task card added! Total cards:', container.querySelectorAll('.task-card').length);
+            
+            // Update task numbers for all cards
+            updateTaskNumbers();
+            
+            // Add event listener for the new remove button
+            const newRemoveBtn = taskCard.querySelector('.remove-task-btn');
+            if (newRemoveBtn) {
+                newRemoveBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Remove button clicked');
+                    removeTaskCard(this);
+                });
+            }
+            
+            return false;
+        }
+        
+        function removeTaskCard(button) {
+            console.log('=== removeTaskCard CALLED ===', button);
+            
+            // Find the parent column div
+            let taskColumn = button.closest('.col-md-6');
+            if (!taskColumn) {
+                taskColumn = button.closest('.col-lg-4');
+            }
+            if (!taskColumn) {
+                // Try to find any parent with col- class
+                let parent = button.parentElement;
+                while (parent && parent !== document.body) {
+                    if (parent.classList) {
+                        const classes = Array.from(parent.classList);
+                        if (classes.some(c => c.startsWith('col-'))) {
+                            taskColumn = parent;
+                            break;
+                        }
+                    }
+                    parent = parent.parentElement;
+                }
+            }
+            
+            if (taskColumn) {
+                console.log('Removing task column');
+                taskColumn.remove();
+                updateTaskNumbers();
+            } else {
+                // Fallback: remove the card itself
+                const card = button.closest('.task-card');
+                if (card) {
+                    console.log('Removing task card (fallback)');
+                    card.remove();
+                    updateTaskNumbers();
+                } else {
+                    console.error('Could not find task column or card to remove');
+                }
+            }
+        }
+        
+        function updateTaskNumbers() {
+            const container = document.getElementById('taskAssignments');
+            if (!container) return;
+            
+            const taskCards = container.querySelectorAll('.task-card');
+            taskCards.forEach((card, index) => {
+                const header = card.querySelector('.card-header span');
+                if (header) {
+                    header.innerHTML = '<i class="bi bi-list-task"></i> Task ' + (index + 1);
+                }
+            });
+        }
+        
+        // Make functions globally available
+        window.addTaskAssignment = addTaskAssignment;
+        window.removeTaskCard = removeTaskCard;
+        
+        // Initialize when page loads
+        (function() {
+            console.log('=== INITIALIZING ===');
+            
+            // Add event listeners for workflow user checkboxes
+            document.querySelectorAll('input[name="workflowUserIds[]"]').forEach(cb => {
+                cb.addEventListener('change', updateTaskUserSelects);
+            });
+            
+            // Add event listeners for existing remove buttons
+            document.querySelectorAll('.remove-task-btn').forEach(btn => {
+                if (!btn.onclick) {
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Existing remove button clicked');
+                        removeTaskCard(this);
+                    });
+                }
+            });
+            
+            // Update initial task selects
+            updateTaskUserSelects();
+            
+            console.log('=== INITIALIZATION COMPLETE ===');
+        })();
+        /*]]>*/
+        </script>
+    </div>

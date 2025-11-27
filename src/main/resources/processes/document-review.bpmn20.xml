@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:flowable="http://flowable.org/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="document-review-definitions" targetNamespace="http://flowable.org/bpmn" exporter="Flowable Open Source Modeler" exporterVersion="6.8.0">
+  <bpmn2:process id="document-review" name="Document Review Process" isExecutable="true">
+    <bpmn2:startEvent id="startEvent" name="Start"/>
+    <bpmn2:userTask id="reviewDocument" name="Review Document" flowable:assignee="${reviewer}">
+      <bpmn2:documentation>User task untuk review dokumen</bpmn2:documentation>
+    </bpmn2:userTask>
+    <bpmn2:serviceTask id="processReview" name="Process Review" flowable:class="com.rpl.bpm.service.ReviewServiceTask">
+      <bpmn2:documentation>Service task untuk memproses hasil review</bpmn2:documentation>
+    </bpmn2:serviceTask>
+    <bpmn2:endEvent id="endEvent" name="End"/>
+    <bpmn2:sequenceFlow id="flow1" sourceRef="startEvent" targetRef="reviewDocument"/>
+    <bpmn2:sequenceFlow id="flow2" sourceRef="reviewDocument" targetRef="processReview"/>
+    <bpmn2:sequenceFlow id="flow3" sourceRef="processReview" targetRef="endEvent"/>
+  </bpmn2:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_document-review">
+    <bpmndi:BPMNPlane id="BPMNPlane_document-review" bpmnElement="document-review">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="startEvent">
+        <dc:Bounds x="100" y="100" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_UserTask_2" bpmnElement="reviewDocument">
+        <dc:Bounds x="200" y="78" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_ServiceTask_2" bpmnElement="processReview">
+        <dc:Bounds x="350" y="78" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_EndEvent_2" bpmnElement="endEvent">
+        <dc:Bounds x="512" y="100" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="BPMNEdge_flow1" bpmnElement="flow1" flowable:sourceDockerX="18.0" flowable:sourceDockerY="18.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
+        <di:waypoint x="136" y="118"/>
+        <di:waypoint x="200" y="118"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_flow2" bpmnElement="flow2" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="50.0" flowable:targetDockerY="40.0">
+        <di:waypoint x="300" y="118"/>
+        <di:waypoint x="350" y="118"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_flow3" bpmnElement="flow3" flowable:sourceDockerX="50.0" flowable:sourceDockerY="40.0" flowable:targetDockerX="18.0" flowable:targetDockerY="18.0">
+        <di:waypoint x="450" y="118"/>
+        <di:waypoint x="512" y="118"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn2:definitions>

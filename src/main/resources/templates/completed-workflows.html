@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{base}">
+<head>
+    <title>Completed Workflows</title>
+</head>
+<body>
+    <div th:fragment="content">
+        <div class="mb-4">
+            <h1><i class="bi bi-check-circle"></i> Completed Workflows</h1>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div th:if="${#lists.isEmpty(workflowsWithTasks)}" class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3">No completed workflows yet</p>
+                    <p class="text-muted small">Workflows that you have completed tasks in will appear here once they are finished.</p>
+                    <a th:href="@{/dashboard}" class="btn btn-primary mt-3">
+                        <i class="bi bi-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+                <div th:if="${!#lists.isEmpty(workflowsWithTasks)}">
+                    <div class="accordion" id="workflowAccordion">
+                        <div class="accordion-item" th:each="workflow : ${workflowsWithTasks}">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" 
+                                        data-bs-toggle="collapse" 
+                                        th:attr="data-bs-target='#collapse' + ${workflow.id}, id='heading' + ${workflow.id}">
+                                    <strong th:text="${workflow.processName}"></strong>
+                                    <span class="badge bg-success ms-2">COMPLETED</span>
+                                </button>
+                            </h2>
+                            <div th:attr="id='collapse' + ${workflow.id}" 
+                                 class="accordion-collapse collapse" 
+                                 data-bs-parent="#workflowAccordion">
+                                <div class="accordion-body">
+                                    <div class="mb-3">
+                                        <h6>Completed At:</h6>
+                                        <p th:text="${workflow.completedAt != null ? #temporals.format(workflow.completedAt, 'yyyy-MM-dd HH:mm:ss') : 'N/A'}"></p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <h6>Result Data:</h6>
+                                        <div class="p-3 bg-light rounded" th:text="${workflow.resultData}"></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <h6>Your Tasks:</h6>
+                                        <div class="list-group">
+                                            <div class="list-group-item" th:each="task : ${workflow.taskAssignments}">
+                                                <h6 th:text="${task.taskName}">Task Name</h6>
+                                                <p class="mb-1" th:text="${task.description}">Description</p>
+                                                <small class="text-muted">
+                                                    Status: <span class="badge bg-success" th:text="${task.status}">APPROVED</span>
+                                                </small>
+                                                <div th:if="${task.userNotes != null}" class="mt-2">
+                                                    <strong>Your Notes:</strong>
+                                                    <p th:text="${task.userNotes}"></p>
+                                                </div>
+                                                <div th:if="${task.adminNotes != null}" class="mt-2">
+                                                    <strong>Admin Notes:</strong>
+                                                    <p th:text="${task.adminNotes}"></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a th:href="@{/dashboard}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
